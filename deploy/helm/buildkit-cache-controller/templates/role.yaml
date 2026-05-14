@@ -1,0 +1,55 @@
+{{- $fullName := include "buildkit-cache-controller.fullname" . -}}
+{{- $saName := include "buildkit-cache-controller.serviceAccountName" . -}}
+{{- $saNs := .Release.Namespace -}}
+{{- $labels := include "buildkit-cache-controller.labels" . -}}
+{{- range $ns := .Values.allowedNamespaces }}
+---
+# Namespaced mutations + Pod/Service/PVC reads in {{ $ns }}.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $fullName }}
+  namespace: {{ $ns }}
+  labels:
+    {{- $labels | nindent 4 }}
+rules:
+  - apiGroups: [apps]
+    resources: [deployments]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [""]
+    resources: [services, persistentvolumeclaims]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [""]
+    resources: [events]
+    verbs: [create, patch]
+  # CRs are fully ns-scoped: cache watches + status writes both happen
+  # via this Role. No ClusterRole on cachedbuilds/cachedbuildtiers.
+  - apiGroups: [ci.siderolabs.com]
+    resources: [cachedbuilds]
+    verbs: [get, list, watch, update, patch, delete]
+  - apiGroups: [ci.siderolabs.com]
+    resources: [cachedbuildtiers]
+    verbs: [get, list, watch]
+  - apiGroups: [ci.siderolabs.com]
+    resources: [cachedbuilds/status]
+    verbs: [get, update, patch]
+  - apiGroups: [ci.siderolabs.com]
+    resources: [cachedbuilds/finalizers]
+    verbs: [update]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $fullName }}
+  namespace: {{ $ns }}
+  labels:
+    {{- $labels | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $fullName }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $saName }}
+    namespace: {{ $saNs }}
+{{- end }}

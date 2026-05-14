@@ -1,0 +1,88 @@
+---
+kind: common.Repository
+spec:
+  licenseChecks:
+    - skipPaths:
+        - .git/
+      includeSuffixes:
+        - .go
+      excludeSuffixes:
+        - .pb.go
+        - zz_generated.deepcopy.go
+      header: |
+        // This Source Code Form is subject to the terms of the Mozilla Public
+        // License, v. 2.0. If a copy of the MPL was not distributed with this
+        // file, You can obtain one at http://mozilla.org/MPL/2.0/.
+---
+kind: golang.Generate
+spec:
+  baseSpecPath: /api
+  versionPackagePath: internal/version
+  goGenerateSpecs:
+    - source: ./api
+      copy:
+        - api/v1alpha1/zz_generated.deepcopy.go
+        - deploy/helm/buildkit-cache-controller/crds/ci.siderolabs.com_cachedbuilds.yaml
+        - deploy/helm/buildkit-cache-controller/crds/ci.siderolabs.com_cachedbuildtiers.yaml
+---
+kind: golang.Build
+spec:
+  outputs:
+    linux-amd64:
+      GOOS: linux
+      GOARCH: amd64
+    linux-arm64:
+      GOOS: linux
+      GOARCH: arm64
+---
+kind: common.Image
+name: image-buildkit-cache-controller
+spec:
+  entrypoint: /usr/local/bin/buildkit-cache-controller
+  extraEnvironment:
+    PLATFORM: linux/amd64,linux/arm64
+---
+kind: auto.CustomSteps
+spec:
+  steps:
+    - name: runner-hooks
+      toplevel: true
+    - name: runner-hooks-copy
+      toplevel: true
+---
+kind: custom.Step
+name: runner-hooks
+spec:
+  docker:
+    enabled: true
+    stages:
+      - name: runner-hooks
+        description: copies the runner hooks
+        steps:
+          - copy:
+              src: --link --chmod=0755 hack/runner-hooks/job-started.sh
+              dst: /runner-hooks/job-started.sh
+          - copy:
+              src: --link --chmod=0755 hack/runner-hooks/job-completed.sh
+              dst: /runner-hooks/job-completed.sh
+---
+kind: common.Image
+name: image-cb-hook
+spec:
+  extraEnvironment:
+    PLATFORM: linux/amd64,linux/arm64
+  allowedLocalPaths:
+    - hack/runner-hooks
+  copyFrom:
+    - name: runner-hooks
+      stage: runner-hooks
+---
+kind: auto.Helm
+spec:
+  enabled: true
+  chartDir: deploy/helm/buildkit-cache-controller
+  chartVersionMajor: 0
+  template:
+    setJSON:
+      - >-
+        '{"allowedNamespaces": ["ci"]}'

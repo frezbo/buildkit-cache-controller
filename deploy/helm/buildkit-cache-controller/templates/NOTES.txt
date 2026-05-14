@@ -1,0 +1,37 @@
+{{- include "buildkit-cache-controller.validateAllowedNamespaces" . -}}
+{{- if .Values.allowedNamespaces -}}
+Thank you for installing {{ .Chart.Name }}.
+
+Controller running in namespace: {{ .Release.Namespace }}
+Allowed namespaces (Pod/Service/PVC mutations + cache scope):
+{{- range .Values.allowedNamespaces }}
+  - {{ . }}
+{{- end }}
+
+Next:
+
+  1. Create a CachedBuildTier in one of the allowed namespaces:
+
+     kubectl apply -f - <<'EOF'
+     apiVersion: ci.siderolabs.com/v1alpha1
+     kind: CachedBuildTier
+     metadata:
+       name: generic
+       namespace: {{ index .Values.allowedNamespaces 0 }}
+     spec:
+       storageClassName: <your-storage-class>
+       storage: 50Gi
+       platforms: [linux/amd64]
+       image: moby/buildkit:v0.30.0
+     EOF
+
+  2. Bake the cb-hook binary + shims into your self-hosted runner image
+     and point the runner at this tier via CB_NAMESPACE / CB_TIER env.
+
+     See: https://github.com/siderolabs/buildkit-cache-controller#runner-image-integration
+
+  3. Inspect controller state:
+
+     kubectl -n {{ .Release.Namespace }} logs deploy/{{ include "buildkit-cache-controller.fullname" . }} -f
+     kubectl -n {{ index .Values.allowedNamespaces 0 }} get cachedbuilds,cachedbuildtiers
+{{- end }}

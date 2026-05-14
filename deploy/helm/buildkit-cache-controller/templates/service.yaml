@@ -1,0 +1,22 @@
+{{- if .Values.metrics.service.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "buildkit-cache-controller.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "buildkit-cache-controller.labels" . | nindent 4 }}
+spec:
+  # Headless ClusterIP: metrics is for scraping, not load-balancing.
+  # Hardcoded — NodePort/LoadBalancer wouldn't make sense for this Service
+  # and would conflict with clusterIP: None anyway.
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: metrics
+      port: {{ .Values.metrics.port }}
+      targetPort: metrics
+      protocol: TCP
+  selector:
+    {{- include "buildkit-cache-controller.selectorLabels" . | nindent 4 }}
+{{- end }}

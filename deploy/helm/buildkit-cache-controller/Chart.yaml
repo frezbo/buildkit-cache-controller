@@ -1,0 +1,21 @@
+apiVersion: v2
+name: buildkit-cache-controller
+description: |
+  Kubernetes controller that provisions per-cache-key buildkit pods backed by
+  named PVCs, for cache-aware CI builds. Consumed by GitHub Actions
+  self-hosted runners via the CachedBuild CRD.
+type: application
+kubeVersion: ">=1.27.0"
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/siderolabs/buildkit-cache-controller
+sources:
+  - https://github.com/siderolabs/buildkit-cache-controller
+keywords:
+  - buildkit
+  - cache
+  - ci
+  - github-actions
+maintainers:
+  - name: Sidero Labs
+    url: https://www.siderolabs.com

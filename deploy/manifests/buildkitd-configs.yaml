@@ -1,0 +1,93 @@
+---
+# GC policies tuned to the `generic` tier's 50 GiB PVC: aggressive prune to
+# stay well under capacity for short-retention small projects.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: buildkitd-config-generic
+  namespace: ci
+data:
+  buildkitd.toml: |
+    insecure-entitlements = [ "network.host", "security.insecure" ]
+
+    [grpc]
+      address = [ "tcp://0.0.0.0:1234" ]
+
+    [worker.oci]
+      gc = true
+
+      [[worker.oci.gcpolicy]]
+        filters       = ["type==source.local","type==exec.cachemount","type==source.git.checkout"]
+        keepDuration  = "24h"
+        reservedSpace = "10GB"
+
+      [[worker.oci.gcpolicy]]
+        keepDuration  = "168h"
+        reservedSpace = "10GB"
+
+      [[worker.oci.gcpolicy]]
+        all           = true
+        maxUsedSpace  = "85%"
+        reservedSpace = "10GB"
+---
+# GC policies tuned to the `pkgs` tier's 250 GiB PVC: long retention for
+# kernel/package builds where intermediate layers are expensive to rebuild.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: buildkitd-config-pkgs
+  namespace: ci
+data:
+  buildkitd.toml: |
+    insecure-entitlements = [ "network.host", "security.insecure" ]
+
+    [grpc]
+      address = [ "tcp://0.0.0.0:1234" ]
+
+    [worker.oci]
+      gc = true
+
+      [[worker.oci.gcpolicy]]
+        filters       = ["type==source.local","type==exec.cachemount","type==source.git.checkout"]
+        keepDuration  = "168h"
+        reservedSpace = "200GB"
+
+      [[worker.oci.gcpolicy]]
+        keepDuration  = "720h"
+        reservedSpace = "200GB"
+
+      [[worker.oci.gcpolicy]]
+        all           = true
+        maxUsedSpace  = "90%"
+        reservedSpace = "200GB"
+---
+# GC policies tuned to the `large` tier's 100 GiB PVC: mid-retention for
+# talos integration jobs where buildkit work is light per job.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: buildkitd-config-large
+  namespace: ci
+data:
+  buildkitd.toml: |
+    insecure-entitlements = [ "network.host", "security.insecure" ]
+
+    [grpc]
+      address = [ "tcp://0.0.0.0:1234" ]
+
+    [worker.oci]
+      gc = true
+
+      [[worker.oci.gcpolicy]]
+        filters       = ["type==source.local","type==exec.cachemount","type==source.git.checkout"]
+        keepDuration  = "72h"
+        reservedSpace = "50GB"
+
+      [[worker.oci.gcpolicy]]
+        keepDuration  = "168h"
+        reservedSpace = "50GB"
+
+      [[worker.oci.gcpolicy]]
+        all           = true
+        maxUsedSpace  = "90%"
+        reservedSpace = "50GB"

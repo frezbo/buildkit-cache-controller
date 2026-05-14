@@ -1,0 +1,101 @@
+# Default values for buildkit-cache-controller.
+
+# -- Required, non-empty list of namespaces the controller may
+# materialize buildkit Deployments / Services / PVCs in; the chart
+# installs a Role + RoleBinding in each. Every watch is scoped to this
+# list (CRs included) so the controller has zero cluster-wide RBAC and
+# CRs created elsewhere are ignored. Empty value aborts install and the
+# controller exits when the allowed-namespaces flag is missing.
+allowedNamespaces: []
+
+image:
+  repository: ghcr.io/siderolabs/buildkit-cache-controller
+  pullPolicy: Always
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+# -- Optional ServiceAccount + Role + RoleBinding for the actions/runner
+# pod that runs cb-hook. Grants the runner SA the minimal CR perms
+# (cachedbuilds get/create/patch) needed by job-started.sh /
+# job-completed.sh. Created once per entry in allowedNamespaces so
+# every namespace the controller watches has a matching runner SA.
+runnerServiceAccount:
+  enabled: false
+  name: cb-runner
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+replicaCount: 1
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  # If not set and create is true, a name is generated using the fullname template.
+  name: ""
+
+# Pod-level security.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+
+# Container-level security.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  capabilities:
+    drop:
+      - ALL
+
+# Leader election (Lease lives in Release.Namespace).
+leaderElection:
+  enabled: true
+  # Lease resource name. Also used as the resourceName in the leader-election
+  # Role so RBAC stays scoped to this single Lease.
+  id: buildkit-cache-controller.siderolabs.com
+
+# Metrics endpoint exposed by the controller (controller-runtime registry).
+metrics:
+  port: 8080
+  service:
+    # Toggle the headless Service that fronts the metrics endpoint.
+    # Type is always ClusterIP (headless) — NodePort / LoadBalancer don't
+    # make sense for scrape targets and conflict with clusterIP: None.
+    enabled: true
+  # VictoriaMetrics-operator scrape resource. Toggle off if your cluster
+  # doesn't run VictoriaMetrics; bring your own ServiceMonitor / PodMonitor
+  # in that case (not shipped).
+  vmServiceScrape:
+    enabled: true
+    interval: 30s
+    # Drops process/go runtime series; keeps cb_* + controller-runtime
+    # reconcile counters. Mirrors the controller's intended cardinality.
+    keepMetrics: "cb_.*|controller_runtime_reconcile_(total|errors_total|time_seconds.*)"
+
+# Liveness/readiness probe ports (matches controller-runtime defaults).
+healthProbe:
+  port: 8081
+
+podAnnotations: {}
+podLabels: {}
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

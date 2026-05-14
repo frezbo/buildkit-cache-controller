@@ -1,0 +1,204 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.21.0
+  name: cachedbuilds.ci.siderolabs.com
+spec:
+  group: ci.siderolabs.com
+  names:
+    kind: CachedBuild
+    listKind: CachedBuildList
+    plural: cachedbuilds
+    shortNames:
+    - cb
+    singular: cachedbuild
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .spec.tier
+      name: Tier
+      type: string
+    - jsonPath: .status.cacheSize
+      name: Size
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          CachedBuild represents one buildkit cache identity backed by a named PVC
+          and an ephemeral, on-demand buildkit Pod.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              CachedBuildSpec is the desired state of a CachedBuild. The CR's
+              metadata.name is the stable cache identity (and the PVC/Deployment/
+              Service naming root); the tier governs every other property
+              (platforms, resources, affinity, idle behavior, image).
+            properties:
+              tier:
+                description: |-
+                  Tier names a CachedBuildTier (in the same namespace) whose spec
+                  drives placement, resources, platforms, and idle behavior.
+                minLength: 1
+                type: string
+            required:
+            - tier
+            type: object
+          status:
+            description: CachedBuildStatus is the observed state of a CachedBuild.
+            properties:
+              cacheSize:
+                description: |-
+                  CacheSize is a humanized total of CacheUsage across all platforms
+                  ("1.2Gi"). Surfaced as a kubectl printColumn for at-a-glance reads.
+                type: string
+              cacheUsage:
+                description: |-
+                  CacheUsage reports the current on-disk cache size as observed via
+                  buildkit's DiskUsage gRPC, per platform.
+                items:
+                  description: CacheUsageEntry reports the on-disk cache size for
+                    one platform pod.
+                  properties:
+                    bytes:
+                      format: int64
+                      type: integer
+                    observedAt:
+                      format: date-time
+                      type: string
+                    platform:
+                      type: string
+                  required:
+                  - bytes
+                  - platform
+                  type: object
+                type: array
+              conditions:
+                description: Conditions surfaces detailed reconcile state.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              deployments:
+                description: |-
+                  Deployments lists the buildkit Deployment names currently serving
+                  this cache (one per platform). When the CR is Idle the Deployments
+                  exist but are scaled to zero replicas.
+                items:
+                  type: string
+                type: array
+              endpoints:
+                description: |-
+                  Endpoints lists the active per-platform buildkit endpoints, suitable
+                  for `buildx --driver=remote`.
+                items:
+                  description: CachedBuildEndpoint exposes the buildkit endpoint for
+                    a single platform.
+                  properties:
+                    endpoint:
+                      type: string
+                    platform:
+                      type: string
+                  required:
+                  - endpoint
+                  - platform
+                  type: object
+                type: array
+              lastActivity:
+                description: |-
+                  LastActivity reflects the most recent LastActivityAnnotation value
+                  observed by the controller. Drives idle-TTL teardown.
+                format: date-time
+                type: string
+              phase:
+                description: CachedBuildPhase represents the lifecycle stage of a
+                  CachedBuild.
+                type: string
+              pvcs:
+                description: PVCs lists the PVC names backing this cache (one per
+                  platform).
+                items:
+                  type: string
+                type: array
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

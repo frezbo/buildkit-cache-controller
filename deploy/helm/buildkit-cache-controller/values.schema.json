@@ -1,0 +1,212 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "affinity": {
+      "type": "object"
+    },
+    "allowedNamespaces": {
+      "description": "Required, non-empty list of namespaces the controller may materialize buildkit Deployments / Services / PVCs in; the chart installs a Role + RoleBinding in each. Every watch is scoped to this list (CRs included) so the controller has zero cluster-wide RBAC and CRs created elsewhere are ignored. Empty value aborts install and the controller exits when the allowed-namespaces flag is missing.",
+      "type": "array"
+    },
+    "fullnameOverride": {
+      "type": "string"
+    },
+    "healthProbe": {
+      "type": "object",
+      "properties": {
+        "port": {
+          "type": "integer"
+        }
+      }
+    },
+    "image": {
+      "type": "object",
+      "properties": {
+        "pullPolicy": {
+          "type": "string"
+        },
+        "repository": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        }
+      }
+    },
+    "imagePullSecrets": {
+      "type": "array"
+    },
+    "leaderElection": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "port": {
+          "type": "integer"
+        },
+        "service": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          }
+        },
+        "vmServiceScrape": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "interval": {
+              "type": "string"
+            },
+            "keepMetrics": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "nameOverride": {
+      "type": "string"
+    },
+    "nodeSelector": {
+      "type": "object"
+    },
+    "podAnnotations": {
+      "type": "object"
+    },
+    "podLabels": {
+      "type": "object"
+    },
+    "podSecurityContext": {
+      "type": "object",
+      "properties": {
+        "fsGroup": {
+          "type": "integer"
+        },
+        "runAsGroup": {
+          "type": "integer"
+        },
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "runAsUser": {
+          "type": "integer"
+        },
+        "seccompProfile": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "replicaCount": {
+      "type": "integer"
+    },
+    "resources": {
+      "type": "object",
+      "properties": {
+        "limits": {
+          "type": "object",
+          "properties": {
+            "cpu": {
+              "type": "string"
+            },
+            "memory": {
+              "type": "string"
+            }
+          }
+        },
+        "requests": {
+          "type": "object",
+          "properties": {
+            "cpu": {
+              "type": "string"
+            },
+            "memory": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "runnerServiceAccount": {
+      "description": "Optional ServiceAccount + Role + RoleBinding for the actions/runner pod that runs cb-hook. Grants the runner SA the minimal CR perms (cachedbuilds get/create/patch) needed by job-started.sh / job-completed.sh. Created once per entry in allowedNamespaces so every namespace the controller watches has a matching runner SA.",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "securityContext": {
+      "type": "object",
+      "properties": {
+        "allowPrivilegeEscalation": {
+          "type": "boolean"
+        },
+        "capabilities": {
+          "type": "object",
+          "properties": {
+            "drop": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "readOnlyRootFilesystem": {
+          "type": "boolean"
+        },
+        "runAsGroup": {
+          "type": "integer"
+        },
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "runAsUser": {
+          "type": "integer"
+        }
+      }
+    },
+    "serviceAccount": {
+      "type": "object",
+      "properties": {
+        "annotations": {
+          "type": "object"
+        },
+        "automount": {
+          "type": "boolean"
+        },
+        "create": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "tolerations": {
+      "type": "array"
+    }
+  }
+}

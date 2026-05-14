@@ -1,0 +1,78 @@
+---
+# Default tier matching the GHA `generic` runner-scale-set: small Go projects,
+# light buildkit work, no spread constraint (one pod per cache key).
+apiVersion: ci.siderolabs.com/v1alpha1
+kind: CachedBuildTier
+metadata:
+  name: generic
+  namespace: ci
+spec:
+  storageClassName: ci-buildkit-cache
+  storage: 50Gi
+  platforms: [linux/amd64]
+  idleTTL: 30m
+  image: moby/buildkit:v0.30.0
+  buildkitdConfigMap: buildkitd-config-generic
+  resources:
+    requests:
+      memory: 1Gi
+    limits:
+      memory: 4Gi
+---
+# `pkgs` runner-scale-set: heavy kernel/package builds. ≥2 parallel jobs forced
+# onto distinct nodes via required hostname anti-affinity.
+apiVersion: ci.siderolabs.com/v1alpha1
+kind: CachedBuildTier
+metadata:
+  name: pkgs
+  namespace: ci
+spec:
+  storageClassName: ci-buildkit-cache
+  storage: 250Gi
+  platforms: [linux/amd64, linux/arm64]
+  idleTTL: 30m
+  image: moby/buildkit:v0.30.0
+  buildkitdConfigMap: buildkitd-config-pkgs
+  resources:
+    requests:
+      cpu: "1"
+      memory: 4Gi
+    limits:
+      memory: 32Gi
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              ci.siderolabs.com/cache-group: pkgs
+---
+# `large` runner-scale-set: talos integration jobs. Mostly QEMU-bound;
+# preferred (best-effort) hostname anti-affinity to spread when capacity allows.
+apiVersion: ci.siderolabs.com/v1alpha1
+kind: CachedBuildTier
+metadata:
+  name: large
+  namespace: ci
+spec:
+  storageClassName: ci-buildkit-cache
+  storage: 100Gi
+  platforms: [linux/amd64]
+  idleTTL: 30m
+  image: moby/buildkit:v0.30.0
+  buildkitdConfigMap: buildkitd-config-large
+  resources:
+    requests:
+      cpu: 500m
+      memory: 2Gi
+    limits:
+      memory: 16Gi
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            topologyKey: kubernetes.io/hostname
+            labelSelector:
+              matchLabels:
+                ci.siderolabs.com/cache-group: large

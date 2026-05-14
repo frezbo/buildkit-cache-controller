@@ -1,0 +1,24 @@
+{{- if and .Values.metrics.service.enabled .Values.metrics.vmServiceScrape.enabled -}}
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: {{ include "buildkit-cache-controller.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "buildkit-cache-controller.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "buildkit-cache-controller.selectorLabels" . | nindent 6 }}
+  endpoints:
+    - port: metrics
+      interval: {{ .Values.metrics.vmServiceScrape.interval }}
+      path: /metrics
+      scheme: http
+      {{- with .Values.metrics.vmServiceScrape.keepMetrics }}
+      metricRelabelConfigs:
+        - source_labels: [__name__]
+          regex: {{ . | quote }}
+          action: keep
+      {{- end }}
+{{- end }}
